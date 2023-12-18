@@ -1,56 +1,28 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const { MongoClient } = require('mongodb');
-
 const app = express();
-const port = 3000;
+const MongoClient = require('mongodb').MongoClient;
 
-// Replace with your MongoDB Atlas connection string
+app.use(express.json());
+
+// Replace <username>, <password>, and <dbname> with your MongoDB Atlas username, password, and database name
 const mongoUri = "mongodb+srv://MERN:mernstack@cluster0.36bh8a0.mongodb.net/?retryWrites=true&w=majority";
 
-let client;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-// Connect to MongoDB using MongoClient
-async function connectToDatabase() {
-  try {
-    client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
-    await client.connect();
-    console.log('Connected to MongoDB database.');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-  }
-}
+client.connect(err => {
+ if (err) throw err;
 
-// Middleware to parse JSON bodies
-app.use(bodyParser.json());
+ const collection = client.db("<dbname>").collection("devices");
 
-// Set up a POST route to receive data from the gateway
-app.post('/gateway', async (req, res) => {
-  try {
-    if (!client || !client.isConnected()) {
-      await connectToDatabase();
-    }
+ app.post('/data', (req, res) => {
+  console.log(req.body);
 
-    // Access the database and collection
-    const database = client.db('BLE'); // Replace with your actual database name
-    const collection = database.collection('SensorData'); // Replace with your actual collection name
+  collection.insertOne(req.body, function(err, result) {
+    if (err) throw err;
+    console.log("1 document inserted");
+    res.sendStatus(200);
+  });
+ });
 
-    // Create a new document from the incoming data
-    const sensorData = req.body;
-
-    // Save the document to the MongoDB database
-    const result = await collection.insertOne(sensorData);
-
-    console.log('Data saved successfully:', result);
-    res.status(200).send('Data received and saved');
-  } catch (error) {
-    console.error('Error saving data:', error);
-    res.status(500).send('Error saving data');
-  }
-});
-
-// Start the server
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
+ app.listen(8080, () => console.log('Server listening on port 8080'));
 });
